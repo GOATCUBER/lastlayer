@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PLL & OLL Viewer & Timer</title>
+<style>
+  /* --- Global Styles --- */
+  body {
+    margin: 0; padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #263238 0%, #37474f 100%);
+    color: #eceff1;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  button {
+    cursor: pointer;
+    background-color: #455a64;
+    border: none;
+    color: #eceff1;
+    padding: 10px 15px;
+    margin: 5px;
+    border-radius: 4px;
+    font-size: 1.1rem;
+    transition: background-color 0.3s ease;
+  }
+  button:hover {
+    background-color: #546e7a;
+  }
+
+  #switch-app-btn {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 100;
+    font-weight: bold;
+  }
+
+  /* --- Viewer Styles --- */
+  section.viewer {
+    flex-grow: 1;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #37474f 0%, #263238 100%);
+  }
+  section.viewer.active {
+    display: flex;
+  }
+
+  img.case-image {
+    max-width: 80vw;
+    max-height: 60vh;
+    border-radius: 8px;
+    box-shadow: 0 0 15px #455a64;
+    margin-bottom: 15px;
+  }
+
+  .case-name {
+    font-size: 1.6rem;
+    text-align: center;
+    margin-bottom: 15px;
+    user-select: none;
+  }
+
+  .case-alg {
+    font-size: 1.2rem;
+    text-align: center;
+    margin-bottom: 15px;
+    user-select: none;
+    color: #bbb;
+    display: none;
+  }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  /* --- Timer Page Styles --- */
+  #timer-page {
+    flex-grow: 1;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 30px 20px 20px 20px;
+    background: linear-gradient(135deg, #263238 0%, #37474f 100%);
+  }
+  #timer-page.active {
+    display: flex;
+  }
+
+  #inspection-display {
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+    user-select: none;
+    color: #b0bec5;
+  }
+
+  /* Big inspection timer styling */
+  #inspection-display.inspection-active {
+    font-size: 3.5rem !important;
+    color: #ffcc00;
+    font-weight: 700;
+    transition: font-size 0.3s ease, color 0.3s ease;
+  }
+
+  #timer-display {
+    font-size: 4.5rem;
+    font-weight: 700;
+    color: #eceff1;
+    user-select: none;
+    margin-bottom: 15px;
+    min-width: 220px;
+    text-align: center;
+  }
+
+  #scramble-display {
+    font-size: 1.2rem;
+    margin-bottom: 25px;
+    max-width: 90vw;
+    color: #cfd8dc;
+    user-select: text;
+    font-family: monospace, monospace;
+    text-align: center;
+    word-wrap: break-word;
+  }
+
+  #solves-list {
+    width: 100%;
+    max-width: 400px;
+    overflow-y: auto;
+    max-height: 240px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    background: #37474f88;
+    padding: 10px;
+    box-sizing: border-box;
+  }
+
+  .solve-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .solve-time {
+    font-size: 1.3rem;
+    user-select: none;
+  }
+  .solve-dnf {
+    color: #ef9a9a;
+    font-weight: 700;
+  }
+  .delete-solve-btn {
+    background-color: transparent;
+    border: none;
+    color: #ef9a9a;
+    font-size: 1.4rem;
+    padding: 0 5px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .delete-solve-btn:hover {
+    color: #ff5252;
+  }
+
+  #averages {
+    display: flex;
+    justify-content: center;
+    gap: 50px;
+    font-size: 1.5rem;
+    font-weight: 600;
+    user-select: none;
+  }
+
+</style>
+</head>
+<body>
+
+<button id="switch-app-btn">Switch to OLL Viewer</button>
+
+<!-- PLL Viewer Section -->
+<section id="pll-viewer" class="viewer active">
+  <img id="pll-image" class="case-image" src="" alt="PLL Case" />
+  <div id="pll-name" class="case-name"></div>
+  <div id="pll-alg" class="case-alg"></div>
+  <div class="controls" id="pll-controls">
+    <button id="prev-pll">Prev</button>
+    <button id="next-pll">Next</button>
+    <button id="random-pll">Random</button>
+    <button id="toggle-name-pll">Show Name</button>
+    <button id="toggle-alg-pll">Show Algorithm</button>
+  </div>
+</section>
+
+<!-- OLL Viewer Section -->
+<section id="oll-viewer" class="viewer">
+  <img id="oll-image" class="case-image" src="" alt="OLL Case" />
+  <div id="oll-name" class="case-name"></div>
+  <div id="oll-alg" class="case-alg"></div>
+  <div class="controls" id="oll-controls">
+    <button id="prev-oll">Prev</button>
+    <button id="next-oll">Next</button>
+    <button id="random-oll">Random</button>
+    <button id="toggle-name-oll">Show Name</button>
+    <button id="toggle-alg-oll">Show Algorithm</button>
+  </div>
+</section>
+
+<!-- Timer Section -->
+<section id="timer-page">
+  <div id="inspection-display">Inspection: 15</div>
+  <div id="scramble-display" title="15-move random scramble"></div>
+  <div id="timer-display">0.00</div>
+  <div id="solves-list"></div>
+  <div id="averages">
+    <div>Ao5: <span id="ao5">-</span></div>
+    <div>Ao12: <span id="ao12">-</span></div>
+  </div>
+  <p style="margin-top: 15px; color: #90a4ae; user-select:none; font-size:0.9rem; text-align:center;">
+    Press Spacebar to start inspection → start solve → stop solve
+  </p>
+</section>
+
+<script>
+  // --- PLL DATA ---
+  const pllCases = [
+    { name: "Aa", img: "PLL_Images/Aa.png", alg: "r U r' U' r' F r2 U' r' U' r U r' F'" },
+    { name: "Ab", img: "PLL_Images/Ab.png", alg: "x R2 D2 R U R' D2 R U' R x'" },
+    { name: "E", img: "PLL_Images/E.png", alg: "x' R U' R' D R U R' D' R U R' D R U' R' D' x" },
+    { name: "F", img: "PLL_Images/F.png", alg: "R' U' F' R U R' U' R' F R2 U' R' U' R U R' U R" },
+    { name: "Ga", img: "PLL_Images/Ga.png", alg: "R2 U R' U R' U' R U' R2 D U' R' U R D'" },
+    { name: "Gb", img: "PLL_Images/Gb.png", alg: "R' U' R U D' R2 U R' U R U' R U' R2 D" },
+    { name: "Gc", img: "PLL_Images/Gc.png", alg: "D R2 U' R U R' U R U' R2 D' R U R' U'" },
+    { name: "Gd", img: "PLL_Images/Gd.png", alg: "R U' R' D R U R' D' R U R' D R U' R' D'" },
+    { name: "H", img: "PLL_Images/H.png", alg: "M2 U M2 U2 M2 U M2" },
+    { name: "Ja", img: "PLL_Images/Ja.png", alg: "x R2 F R F' U2 r U r' U2 x'" },
+    { name: "Jb", img: "PLL_Images/Jb.png", alg: "R U R' F' R U R' U' R' F R2 U' R' U'" },
+    { name: "Na", img: "PLL_Images/Na.png", alg: "L U' R D2 R' U L' U' R D2 R' U'" },
+    { name: "Nb", img: "PLL_Images/Nb.png", alg: "R U' L' D2 L U' R' U L' D2 L U" },
+    { name: "Ra", img: "PLL_Images/Ra.png", alg: "R U' R' U' R U R D R' U2 R D' R' U2 R2" },
+    { name: "Rb", img: "PLL_Images/Rb.png", alg: "R2 U R U R' U' R' U' R' U R'" },
+    { name: "T", img: "PLL_Images/T.png", alg: "R U R' U' R' F R2 U' R' U' R U R' F'" },
+    { name: "Ua", img: "PLL_Images/Ua.png", alg: "M2 U M U2 M U M2" },
+    { name: "Ub", img: "PLL_Images/Ub.png", alg: "M2 U' M U2 M' U' M2" },
+    { name: "V", img: "PLL_Images/V.png", alg: "R' U R' d2 R U' R' d2 R2" },
+    { name: "Y", img: "PLL_Images/Y.png", alg: "F R U' R' U' R U R' F' R U R' U' R' F R F'" },
+    { name: "Z", img: "PLL_Images/Z.png", alg: "M' U M2 U M2 U M' U2 M2" }
+  ];
+
+  // --- OLL DATA ---
+  const ollCases = [
+    { name: "OLL 1", img: "OLL_Images/1.png", alg: "" },
+    { name: "OLL 2", img: "OLL_Images/2.png", alg: "" },
+    { name: "OLL 3", img: "OLL_Images/3.png", alg: "" },
+    { name: "OLL 4", img: "OLL_Images/4.png", alg: "" },
+    { name: "OLL 5", img: "OLL_Images/5.png", alg: "" },
+    { name: "OLL 6", img: "OLL_Images/6.png", alg: "" },
+    { name: "OLL 7", img: "OLL_Images/7.png", alg: "" },
+    { name: "OLL 8", img: "OLL_Images/8.png", alg: "" },
+    { name: "OLL 9", img: "OLL_Images/9.png", alg: "" },
+    { name: "OLL 10", img: "OLL_Images/10.png", alg: "" },
+    { name: "OLL 11", img: "OLL_Images/11.png", alg: "" },
+    { name: "OLL 12", img: "OLL_Images/12.png", alg: "" },
+    { name: "OLL 13", img: "OLL_Images/13.png", alg: "" },
+    { name: "OLL 14", img: "OLL_Images/14.png", alg: "" },
+    { name: "OLL 15", img: "OLL_Images/15.png", alg: "" },
+    { name: "OLL 16", img: "OLL_Images/16.png", alg: "" },
+    { name: "OLL 17", img: "OLL_Images/17.png", alg: "" },
+    { name: "OLL 18", img: "OLL_Images/18.png", alg: "" },
+    { name: "OLL 19", img: "OLL_Images/19.png", alg: "" },
+    { name: "OLL 20", img: "OLL_Images/20.png", alg: "" },
+    { name: "OLL 21", img: "OLL_Images/21.png", alg: "" },
+    { name: "OLL 22", img: "OLL_Images/22.png", alg: "" },
+    { name: "OLL 23", img: "OLL_Images/23.png", alg: "" },
+    { name: "OLL 24", img: "OLL_Images/24.png", alg: "" },
+    { name: "OLL 25", img: "OLL_Images/25.png", alg: "" },
+    { name: "OLL 26", img: "OLL_Images/26.png", alg: "" },
+    { name: "OLL 27", img: "OLL_Images/27.png", alg: "" },
+    { name: "OLL 28", img: "OLL_Images/28.png", alg: "" },
+    { name: "OLL 29", img: "OLL_Images/29.png", alg: "" },
+    { name: "OLL 30", img: "OLL_Images/30.png", alg: "" },
+    { name: "OLL 31", img: "OLL_Images/31.png", alg: "" },
+    { name: "OLL 32", img: "OLL_Images/32.png", alg: "" },
+    { name: "OLL 33", img: "OLL_Images/33.png", alg: "" },
+    { name: "OLL 34", img: "OLL_Images/34.png", alg: "" },
+    { name: "OLL 35", img: "OLL_Images/35.png", alg: "" },
+    { name: "OLL 36", img: "OLL_Images/36.png", alg: "" },
+    { name: "OLL 37", img: "OLL_Images/37.png", alg: "" },
+    { name: "OLL 38", img: "OLL_Images/38.png", alg: "" },
+    { name: "OLL 39", img: "OLL_Images/39.png", alg: "" },
+    { name: "OLL 40", img: "OLL_Images/40.png", alg: "" },
+    { name: "OLL 41", img: "OLL_Images/41.png", alg: "" },
+    { name: "OLL 42", img: "OLL_Images/42.png", alg: "" },
+    { name: "OLL 43", img: "OLL_Images/43.png", alg: "" },
+    { name: "OLL 44", img: "OLL_Images/44.png", alg: "" },
+    { name: "OLL 45", img: "OLL_Images/45.png", alg: "" },
+    { name: "OLL 46", img: "OLL_Images/46.png", alg: "" },
+    { name: "OLL 47", img: "OLL_Images/47.png", alg: "" },
+    { name: "OLL 48", img: "OLL_Images/48.png", alg: "" },
+    { name: "OLL 49", img: "OLL_Images/49.png", alg: "" },
+    { name: "OLL 50", img: "OLL_Images/50.png", alg: "" },
+    { name: "OLL 51", img: "OLL_Images/51.png", alg: "" },
+    { name: "OLL 52", img: "OLL_Images/52.png", alg: "" },
+    { name: "OLL 53", img: "OLL_Images/53.png", alg: "" },
+    { name: "OLL 54", img: "OLL_Images/54.png", alg: "" },
+    { name: "OLL 55", img: "OLL_Images/55.png", alg: "" },
+    { name: "OLL 56", img: "OLL_Images/56.png", alg: "" },
+    { name: "OLL 57", img: "OLL_Images/57.png", alg: "" }
+  ];
+
+  // --- Current Indexes and States ---
+  let pllIndex = 0;
+  let pllShowName = true;
+  let pllShowAlg = false;
+
+  let ollIndex = 0;
+  let ollShowName = true;
+  let ollShowAlg = false;
+
+  // --- DOM Elements for PLL ---
+  const pllImage = document.getElementById('pll-image');
+  const pllName = document.getElementById('pll-name');
+  const pllAlg = document.getElementById('pll-alg');
+  const btnPrevPLL = document.getElementById('prev-pll');
+  const btnNextPLL = document.getElementById('next-pll');
+  const btnRandomPLL = document.getElementById('random-pll');
+  const btnToggleNamePLL = document.getElementById('toggle-name-pll');
+  const btnToggleAlgPLL = document.getElementById('toggle-alg-pll');
+
+  // --- DOM Elements for OLL ---
+  const ollImage = document.getElementById('oll-image');
+  const ollName = document.getElementById('oll-name');
+  const ollAlg = document.getElementById('oll-alg');
+  const btnPrevOLL = document.getElementById('prev-oll');
+  const btnNextOLL = document.getElementById('next-oll');
+  const btnRandomOLL = document.getElementById('random-oll');
+  const btnToggleNameOLL = document.getElementById('toggle-name-oll');
+  const btnToggleAlgOLL = document.getElementById('toggle-alg-oll');
+
+  // --- Sections ---
+  const pllViewer = document.getElementById('pll-viewer');
+  const ollViewer = document.getElementById('oll-viewer');
+  const timerPage = document.getElementById('timer-page');
+  const switchAppBtn = document.getElementById('switch-app-btn');
+
+  // --- Timer Elements ---
+  const inspectionDisplay = document.getElementById('inspection-display');
+  const timerDisplay = document.getElementById('timer-display');
+  const scrambleDisplay = document.getElementById('scramble-display');
+  const solvesList = document.getElementById('solves-list');
+  const ao5Display = document.getElementById('ao5');
+  const ao12Display = document.getElementById('ao12');
+
+  // --- Mode Management ---
+  // Modes: 'pll', 'oll', 'timer'
+  let currentMode = 'pll';
+
+  // --- Utility Functions ---
+  function updatePLLViewer() {
+    const caseData = pllCases[pllIndex];
+    pllImage.src = caseData.img;
+    pllImage.alt = `PLL Case ${caseData.name}`;
+    pllName.textContent = pllShowName ? caseData.name : '';
+    pllAlg.textContent = pllShowAlg ? caseData.alg : '';
+    pllAlg.style.display = pllShowAlg ? 'block' : 'none';
+    btnToggleNamePLL.textContent = pllShowName ? "Hide Name" : "Show Name";
+    btnToggleAlgPLL.textContent = pllShowAlg ? "Hide Algorithm" : "Show Algorithm";
+  }
+
+  function updateOLLViewer() {
+    const caseData = ollCases[ollIndex];
+    ollImage.src = caseData.img;
+    ollImage.alt = `OLL Case ${caseData.name}`;
+    ollName.textContent = ollShowName ? caseData.name : '';
+    ollAlg.textContent = ollShowAlg ? caseData.alg : '';
+    ollAlg.style.display = ollShowAlg ? 'block' : 'none';
+    btnToggleNameOLL.textContent = ollShowName ? "Hide Name" : "Show Name";
+    btnToggleAlgOLL.textContent = ollShowAlg ? "Hide Algorithm" : "Show Algorithm";
+  }
+
+  // --- PLL Event Listeners ---
+  btnPrevPLL.addEventListener('click', () => {
+    pllIndex = (pllIndex - 1 + pllCases.length) % pllCases.length;
+    updatePLLViewer();
+  });
+
+  btnNextPLL.addEventListener('click', () => {
+    pllIndex = (pllIndex + 1) % pllCases.length;
+    updatePLLViewer();
+  });
+
+  btnRandomPLL.addEventListener('click', () => {
+    pllIndex = Math.floor(Math.random() * pllCases.length);
+    updatePLLViewer();
+  });
+
+  btnToggleNamePLL.addEventListener('click', () => {
+    pllShowName = !pllShowName;
+    updatePLLViewer();
+  });
+
+  btnToggleAlgPLL.addEventListener('click', () => {
+    pllShowAlg = !pllShowAlg;
+    updatePLLViewer();
+  });
+
+  // --- OLL Event Listeners ---
+  btnPrevOLL.addEventListener('click', () => {
+    ollIndex = (ollIndex - 1 + ollCases.length) % ollCases.length;
+    updateOLLViewer();
+  });
+
+  btnNextOLL.addEventListener('click', () => {
+    ollIndex = (ollIndex + 1) % ollCases.length;
+    updateOLLViewer();
+  });
+
+  btnRandomOLL.addEventListener('click', () => {
+    ollIndex = Math.floor(Math.random() * ollCases.length);
+    updateOLLViewer();
+  });
+
+  btnToggleNameOLL.addEventListener('click', () => {
+    ollShowName = !ollShowName;
+    updateOLLViewer();
+  });
+
+  btnToggleAlgOLL.addEventListener('click', () => {
+    ollShowAlg = !ollShowAlg;
+    updateOLLViewer();
+  });
+
+  // --- Switching Between Modes ---
+  function switchMode(newMode) {
+    currentMode = newMode;
+    pllViewer.classList.remove('active');
+    ollViewer.classList.remove('active');
+    timerPage.classList.remove('active');
+
+    if (newMode === 'pll') {
+      pllViewer.classList.add('active');
+      switchAppBtn.textContent = "Switch to OLL Viewer";
+    } else if (newMode === 'oll') {
+      ollViewer.classList.add('active');
+      switchAppBtn.textContent = "Switch to Timer";
+    } else {
+      timerPage.classList.add('active');
+      switchAppBtn.textContent = "Switch to PLL Viewer";
+    }
+  }
+
+  // Handle switch button clicks
+  switchAppBtn.addEventListener('click', () => {
+    if (currentMode === 'pll') switchMode('oll');
+    else if (currentMode === 'oll') switchMode('timer');
+    else switchMode('pll');
+  });
+
+  // --- Timer Code ---
+
+  // Scramble generator for 3x3 (basic random moves)
+  const moves = ["R", "L", "U", "D", "F", "B"];
+  const modifiers = ["", "'", "2"];
+
+  function generateScramble(length = 15) {
+    let scramble = [];
+    let lastMove = "";
+    for (let i = 0; i < length; i++) {
+      let move;
+      do {
+        move = moves[Math.floor(Math.random() * moves.length)];
+      } while (move === lastMove);
+      lastMove = move;
+      const mod = modifiers[Math.floor(Math.random() * modifiers.length)];
+      scramble.push(move + mod);
+    }
+    return scramble.join(' ');
+  }
+
+  // Timer state variables
+  let inspectionTime = 15; // seconds inspection
+  let inspectionInterval = null;
+  let solveStartTime = null;
+  let timerInterval = null;
+  let inspectionActive = false;
+  let timerRunning = false;
+
+  // Solve history array (each item: {time: number (ms), dnf: bool})
+  let solves = [];
+
+  function formatTime(ms) {
+    if (ms === null || ms < 0) return "0.00";
+    let seconds = Math.floor(ms / 1000);
+    let milliseconds = Math.floor((ms % 1000) / 10);
+    return `${seconds}.${milliseconds.toString().padStart(2, '0')}`;
+  }
+
+  function startInspection() {
+    inspectionTime = 15;
+    inspectionActive = true;
+    inspectionDisplay.textContent = `Inspection: ${inspectionTime}`;
+    inspectionDisplay.classList.add('inspection-active');
+    inspectionInterval = setInterval(() => {
+      inspectionTime--;
+      if (inspectionTime >= 0) {
+        inspectionDisplay.textContent = `Inspection: ${inspectionTime}`;
+        // When inspection hits 5 seconds or below, color stays yellow
+        if (inspectionTime <= 5) {
+          inspectionDisplay.classList.add('inspection-active');
+        }
+      } else {
+        // Inspection ended with DNF
+        stopInspection(true);
+      }
+    }, 1000);
+  }
+
+  function stopInspection(dnf = false) {
+    inspectionActive = false;
+    clearInterval(inspectionInterval);
+    inspectionDisplay.classList.remove('inspection-active');
+    if (dnf) {
+      timerDisplay.textContent = "DNF";
+      timerRunning = false;
+    } else {
+      startTimer();
+    }
+  }
+
+  function startTimer() {
+    solveStartTime = performance.now();
+    timerRunning = true;
+    timerInterval = setInterval(() => {
+      const elapsed = performance.now() - solveStartTime;
+      timerDisplay.textContent = formatTime(elapsed);
+    }, 30);
+  }
+
+  function stopTimer() {
+    if (!timerRunning) return;
+    timerRunning = false;
+    clearInterval(timerInterval);
+    const solveTime = performance.now() - solveStartTime;
+    timerDisplay.textContent = formatTime(solveTime);
+    addSolve(solveTime);
+  }
+
+  function addSolve(time) {
+    solves.push({ time, dnf: false });
+    renderSolves();
+  }
+
+  function renderSolves() {
+    solvesList.innerHTML = "";
+    solves.forEach((solve, index) => {
+      const div = document.createElement('div');
+      div.classList.add('solve-entry');
+      const timeSpan = document.createElement('span');
+      timeSpan.classList.add('solve-time');
+      timeSpan.textContent = solve.dnf ? "DNF" : formatTime(solve.time);
+      if (solve.dnf) timeSpan.classList.add('solve-dnf');
+      const delBtn = document.createElement('button');
+      delBtn.classList.add('delete-solve-btn');
+      delBtn.textContent = "×";
+      delBtn.title = "Delete solve";
+      delBtn.addEventListener('click', () => {
+        solves.splice(index, 1);
+        renderSolves();
+      });
+      div.appendChild(timeSpan);
+      div.appendChild(delBtn);
+      solvesList.appendChild(div);
+    });
+    updateAverages();
+  }
+
+  // Calculate Ao5 (average of last 5 solves excluding fastest and slowest)
+  function calculateAverage(count) {
+    if (solves.length < count) return null;
+    const recent = solves.slice(-count);
+    if (recent.some(s => s.dnf)) return null;
+    let times = recent.map(s => s.time).sort((a,b) => a-b);
+    times.shift(); // remove fastest
+    times.pop();   // remove slowest
+    const avg = times.reduce((a,b) => a+b, 0) / times.length;
+    return avg;
+  }
+
+  function updateAverages() {
+    const ao5 = calculateAverage(5);
+    ao5Display.textContent = ao5 !== null ? formatTime(ao5) : "-";
+    const ao12 = calculateAverage(12);
+    ao12Display.textContent = ao12 !== null ? formatTime(ao12) : "-";
+  }
+
+  // Generate initial scramble
+  scrambleDisplay.textContent = generateScramble();
+
+  // Spacebar key listener to control inspection & timer
+  window.addEventListener('keydown', (e) => {
+    if (e.code === "Space") {
+      e.preventDefault();
+
+      if (currentMode !== 'timer') return; // Only timer page responds to spacebar
+
+      if (!inspectionActive && !timerRunning) {
+        // Start inspection
+        inspectionDisplay.textContent = `Inspection: 15`;
+        inspectionDisplay.classList.add('inspection-active');
+        startInspection();
+      } else if (inspectionActive && !timerRunning) {
+        // End inspection early, start timer
+        stopInspection(false);
+      } else if (timerRunning) {
+        // Stop timer and generate new scramble
+        stopTimer();
+        scrambleDisplay.textContent = generateScramble();
+      }
+    }
+  });
+
+  // Initialize PLL and OLL viewers on page load
+  updatePLLViewer();
+  updateOLLViewer();
+
+  // Initialize first mode display
+  switchMode('pll');
+</script>
+
+</body>
+</html>
