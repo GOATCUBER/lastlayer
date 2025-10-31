@@ -562,28 +562,50 @@
   }
 
   function renderSolves() {
-    solvesList.innerHTML = "";
-    solves.forEach((solve, index) => {
-      const div = document.createElement('div');
-      div.classList.add('solve-entry');
-      const timeSpan = document.createElement('span');
-      timeSpan.classList.add('solve-time');
-      timeSpan.textContent = solve.dnf ? "DNF" : formatTime(solve.time);
-      if (solve.dnf) timeSpan.classList.add('solve-dnf');
-      const delBtn = document.createElement('button');
-      delBtn.classList.add('delete-solve-btn');
-      delBtn.textContent = "×";
-      delBtn.title = "Delete solve";
-      delBtn.addEventListener('click', () => {
-        solves.splice(index, 1);
-        renderSolves();
-      });
-      div.appendChild(timeSpan);
-      div.appendChild(delBtn);
-      solvesList.appendChild(div);
+  solvesList.innerHTML = "";
+  solves.forEach((solve, index) => {
+    const div = document.createElement('div');
+    div.classList.add('solve-entry');
+    const timeSpan = document.createElement('span');
+    timeSpan.classList.add('solve-time');
+    timeSpan.textContent = solve.dnf ? "DNF" : formatTime(solve.time);
+    if (solve.dnf) timeSpan.classList.add('solve-dnf');
+    const delBtn = document.createElement('button');
+    delBtn.classList.add('delete-solve-btn');
+    delBtn.textContent = "×";
+    delBtn.title = "Delete solve";
+    delBtn.addEventListener('click', () => {
+      solves.splice(index, 1);
+      renderSolves();
+      saveSolves(); // <-- added
     });
-    updateAverages();
+    div.appendChild(timeSpan);
+    div.appendChild(delBtn);
+    solvesList.appendChild(div);
+  });
+  updateAverages();
+  saveSolves(); // <-- added
+}
+// --- Local Storage Persistence ---
+// <-- added
+function saveSolves() {
+  localStorage.setItem('solves', JSON.stringify(solves));
+}
+
+function loadSolves() {
+  const saved = localStorage.getItem('solves');
+  if (saved) {
+    try {
+      solves = JSON.parse(saved);
+      renderSolves();
+    } catch (e) {
+      console.error("Error loading solves:", e);
+      solves = [];
+    }
   }
+}
+// <-- end added
+
 
   // Calculate Ao5 (average of last 5 solves excluding fastest and slowest)
   function calculateAverage(count) {
@@ -636,6 +658,8 @@
 
   // Initialize first mode display
   switchMode('pll');
+  loadSolves(); // <-- added
+
 </script>
 
 </body>
